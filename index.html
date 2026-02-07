@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halo's Life Dashboard V7.14 (PDF Fix)</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 html2canvas 用于生成图片 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+        .serif { font-family: 'Noto Serif SC', serif; }
+        
+        :root {
+            --c-accent: #C7B299; /* Morandi Gold */
+            --c-success: #8F9E8B; /* Morandi Sage */
+            --c-primary-btn: #748E9A; /* Morandi Blue */
+        }
+
+        /* 通用样式 */
+        .print-page {
+            width: 8.5in;
+            min-height: 11in;
+            background: white;
+            padding: 0.5in 0.6in;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            transition: height 0.3s;
+        }
+        
+        #view-wheel .print-page { justify-content: flex-start; }
+        #view-wheel .page-center-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; }
+
+        .slider-thumb { -webkit-appearance: none; width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; outline: none; opacity: 0.9; transition: opacity .2s; }
+        .slider-thumb::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        textarea:focus, input[type="text"]:focus, input[type="number"]:focus { outline: none; background-color: #fff; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05); }
+
+        .tooltip {
+            position: absolute; background: rgba(255, 255, 255, 0.95); border: 1px solid #e5e7eb; padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #4b5563; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); pointer-events: none; opacity: 0; transition: opacity 0.2s, transform 0.2s; z-index: 50; max-width: 250px; line-height: 1.5; backdrop-filter: blur(4px);
+        }
+        .tooltip.visible { opacity: 1; transform: translateY(-5px); }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: flex; justify-content: center; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .custom-checkbox input:checked + div { background-color: currentColor; border-color: currentColor; }
+        .multi-tag-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; border: 1px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 95%; max-width: 900px; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-height: 85vh; overflow-y: auto; }
+        .modal-open { display: flex; }
+
+        .token-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+        
+        .goal-input { background: transparent; border-bottom: 1px dashed white; text-align: center; width: 2.5rem; color: white; font-weight: bold; transition: all 0.2s; }
+        .goal-input:hover { border-bottom-color: rgba(255,255,255,0.8); }
+        .goal-input:focus { border-bottom-style: solid; border-bottom-color: white; outline: none; }
+        
+        .dim-target-input { background: transparent; border-bottom: 1px dashed #d1d5db; text-align: center; width: 1.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: bold; color: inherit; padding: 0; margin: 0 2px; }
+        .dim-target-input:focus { border-bottom-style: solid; outline: none; background-color: rgba(255,255,255,0.5); }
+        
+        .date-input {
+            background: transparent;
+            border-bottom: 1px dashed #d1d5db;
+            text-align: right;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.75rem; /* text-xs */
+            color: #9ca3af; /* text-gray-400 */
+            width: 140px;
+            text-transform: uppercase;
+        }
+        .date-input:focus { border-bottom-style: solid; border-bottom-color: #6b7280; color: #4b5563; outline: none; }
+
+        input[type="color"] { -webkit-appearance: none; border: none; width: 24px; height: 24px; padding: 0; overflow: hidden; border-radius: 50%; cursor: pointer; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
+        
+        .bg-accent { background-color: var(--c-accent); }
+        .bg-success { background-color: var(--c-success); }
+
+        .counter-btn { width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; transition: all 0.1s; border: 1px solid transparent; }
+        .counter-btn:hover { background-color: rgba(0,0,0,0.05); }
+        .counter-btn:active { transform: scale(0.9); background-color: rgba(0,0,0,0.1); }
+        .counter-btn.plus { color: #10b981; background-color: #ecfdf5; border-color: #a7f3d0; }
+        .counter-btn.plus:hover { background-color: #d1fae5; }
+        .counter-btn.minus { color: #ef4444; opacity: 0.3; }
+        .counter-btn.minus:hover { opacity: 1; background-color: #fef2f2; border-color: #fecaca; }
+        
+        .timer-badge { font-family: monospace; font-size: 10px; background: #f3f4f6; color: #6b7280; padding: 1px 4px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+        .chart-bar:hover { filter: brightness(0.95); }
+
+        /* 导出容器样式 (仅在生成图片时使用) */
+        #export-container {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 900px; /* 固定导出宽度，保证清晰度 */
+            background: white;
+            z-index: -1;
+        }
+        
+        /* V7.11 修复: 导出时的样式修正 */
+        .export-mode .print-page {
+            box-shadow: none !important;
+            margin: 0 !important;
+            border-bottom: 1px dashed #eee; /* 页与页之间的分隔线 */
+            height: auto !important; /* 允许高度自适应，防止裁剪 */
+            min-height: auto !important;
+            overflow: visible !important; /* 关键：禁止裁剪文字 */
+            padding-bottom: 40px !important;
+        }
+        
+        /* 强制所有导出内容可见 */
+        .export-mode * {
+            overflow: visible !important; 
+        }
+
+        .export-mode textarea {
+            resize: none;
+            border: none;
+            overflow: hidden;
+        }
+
+        /* V7.13 新增: 打印专用样式 (PDF导出) */
+        @media print {
+            body {
+                background-color: white !important;
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* 隐藏导航栏、按钮、弹窗等所有非打印内容 */
+            .no-print, .modal-overlay, #smart-tooltip, button {
+                display: none !important;
+            }
+
+            /* 隐藏所有标签页 */
+            .tab-content {
+                display: none !important;
+            }
+
+            /* 只显示带有 print-me 类的标签页 */
+            .tab-content.print-me {
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                height: auto !important;
+                min-height: unset !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                opacity: 1 !important;
+                transform: none !important;
+                animation: none !important;
+            }
+
+            /* 多个打印区域之间分页，但最后一个之后不分页，避免尾部空白页 */
+            .tab-content.print-me ~ .tab-content.print-me {
+                page-break-before: always;
+            }
+
+            .print-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 20px 40px !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                height: auto !important;
+            }
+
+            /* 确保图表和文字在打印时清晰 */
+            svg {
+                shape-rendering: geometricPrecision;
+            }
+            
+            /* 移除打印时的输入框背景 */
+            textarea, input {
+                background: transparent !important;
+                border: none !important;
+                resize: none;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 transition-colors duration-300 bg-gray-50">
+
+    <div id="smart-tooltip" class="tooltip"></div>
+
+    <!-- Print/Export Selection Modal -->
+    <div id="print-modal" class="modal-overlay" style="z-index: 150;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h3 class="text-xl font-bold text-gray-800">Export & Save</h3>
+                <button onclick="closePrintModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <p class="text-sm text-gray-500 mb-4">Choose which sections to include:</p>
+            
+            <div class="space-y-3 mb-8">
+                <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" class="form-checkbox w-5 h-5 text-gray-600 rounded focus:ring-gray-500 print-option" value="view-wheel" checked>
+                    <div><span class="block font-bold text-gray-700">Assessment</span><span class="text-xs text-gray-400">Wheel, Scores, Quick Notes</span></div>
+                </label>
+                <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" class="form-checkbox w-5 h-5 text-gray-600 rounded focus:ring-gray-500 print-option" value="view-tracker" checked>
+                    <div><span class="block font-bold text-gray-700">Tracker</span><span class="text-xs text-gray-400">Goals, Counters, Progress</span></div>
+                </label>
+                <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" class="form-checkbox w-5 h-5 text-gray-600 rounded focus:ring-gray-500 print-option" value="view-stats">
+                    <div><span class="block font-bold text-gray-700">Statistics</span><span class="text-xs text-gray-400">Charts & Trends</span></div>
+                </label>
+                <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" class="form-checkbox w-5 h-5 text-gray-600 rounded focus:ring-gray-500 print-option" value="view-journal">
+                    <div><span class="block font-bold text-gray-700">Journal</span><span class="text-xs text-gray-400">Reflections</span></div>
+                </label>
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <button onclick="exportImage()" id="btn-export-img" class="flex justify-center items-center gap-2 px-6 py-3 text-white rounded-lg shadow hover:opacity-90 transition-all active:scale-95 text-sm font-bold w-full" style="background-color: var(--c-primary-btn);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    保存为高清长图 (Save as Image)
+                </button>
+                
+                <button onclick="confirmPrint()" class="flex justify-center items-center gap-2 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-all active:scale-95 text-sm font-bold w-full">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    导出 PDF 文本 / 打印 (Print PDF)
+                </button>
+
+                <div class="text-center text-xs text-gray-400 mt-1">
+                    提示：在打印预览窗口选择 "另存为 PDF" (Save as PDF) 以获得最佳清晰度和可选文本。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="modal-overlay" style="z-index: 200;">
+        <div class="modal-content" style="max-width: 400px; text-align: center; padding-top: 30px;">
+            <div class="mb-4 text-gray-400">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2" id="confirm-title">Confirm Action</h3>
+            <p id="confirm-msg" class="text-gray-600 mb-8 text-sm leading-relaxed"></p>
+            <div class="flex justify-center gap-4">
+                <button onclick="closeConfirm()" id="confirm-cancel-btn" class="px-6 py-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium">Cancel</button>
+                <button id="confirm-yes-btn" class="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 shadow-md transition-all active:scale-95 text-sm font-medium">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Settings Modal -->
+    <div id="advanced-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">配置生命维度</h2>
+                    <p class="text-sm text-gray-500">增加、删除或重新定义你的生命维度。</p>
+                </div>
+                <button onclick="closeAdvancedModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="grid grid-cols-12 gap-2 md:gap-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider px-2">
+                <div class="col-span-1 text-center">Color</div>
+                <div class="col-span-1 text-center">Icon</div>
+                <div class="col-span-3">Title</div>
+                <div class="col-span-3">Subtitle</div>
+                <div class="col-span-3">Action Tooltip</div>
+                <div class="col-span-1 text-center">Del</div>
+            </div>
+            <div id="advanced-grid" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+            <div class="mt-4 pt-4 border-t flex justify-between items-center bg-gray-50 p-4 rounded-lg">
+                <button onclick="addNewDimension()" class="add-dim-btn flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 shadow-sm text-sm font-bold transition-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    添加新维度
+                </button>
+                <div class="flex gap-3">
+                    <button onclick="tryResetToDefault()" class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded">重置为默认</button>
+                    <button onclick="closeAdvancedModal()" class="px-6 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 shadow">完成保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Edit Modal -->
+    <div id="action-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-title">Edit Action</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Action Name</label>
+                    <input type="text" id="modal-action-text" class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. Yoga">
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Tracking Mode</label>
+                    <div class="flex gap-4 mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="action-mode" value="count" checked onchange="toggleModeInputs()">
+                            <span class="text-sm text-gray-700">Counter (Times)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="action-mode" value="time" onchange="toggleModeInputs()">
+                            <span class="text-sm text-gray-700">Timer (Duration)</span>
+                        </label>
+                    </div>
+                    
+                    <div id="timer-options" class="hidden pl-1 border-l-2 border-blue-200">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-600">Every</span>
+                            <input type="number" id="modal-min-per-token" value="30" class="w-16 border rounded px-2 py-1 text-center text-sm" min="1">
+                            <span class="text-sm text-gray-600">minutes = 1 Token</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1">Example: If set to 30min, recording 60min of yoga = 2 Tokens.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Impacts Dimensions</label>
+                    <div class="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto" id="modal-dim-grid"></div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeActionModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+                <button onclick="saveAction()" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 shadow">Save Action</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="no-print w-full max-w-5xl px-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 bg-gray-50/95 backdrop-blur py-4 z-20 border-b border-gray-200" id="navigation">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 serif">Life Dashboard</h1>
+            <p class="text-xs text-gray-500">V7.14 (PDF Fix)</p>
+        </div>
+        <div class="flex bg-gray-200 p-1 rounded-lg overflow-x-auto">
+            <button onclick="switchTab('wheel')" id="tab-wheel" class="whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all shadow bg-white text-gray-900">Assessment</button>
+            <button onclick="switchTab('tracker')" id="tab-tracker" class="whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">Tracker</button>
+            <button onclick="switchTab('stats')" id="tab-stats" class="whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">Statistics</button>
+            <button onclick="switchTab('journal')" id="tab-journal" class="whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">Journal</button>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openAdvancedModal()" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 bg-white border border-gray-200 shadow-sm transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+            <button onclick="openPrintModal()" class="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow hover:opacity-90 transition-all active:scale-95 text-sm font-medium" style="background-color: var(--c-primary-btn);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                打印/导出
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW 1: Wheel -->
+    <div id="view-wheel" class="tab-content active">
+        <div class="print-page rounded-xl shadow-xl border border-gray-200">
+            <div class="print-header-wrapper w-full flex justify-between items-end border-b border-gray-200 pb-4">
+                <div><h2 class="text-3xl font-serif text-gray-900 tracking-tight">The Wheel of Life</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Snapshot: How does it feel right now?</p></div>
+                <div class="text-right text-xs text-gray-400 font-mono flex flex-col items-end gap-1"><div class="flex items-center gap-1"><span>NAME:</span><input type="text" value="HALO" class="name-input bg-transparent border-b border-dashed border-gray-300 w-24 text-right font-mono text-xs text-gray-400 uppercase focus:border-gray-500 focus:text-gray-600 transition-colors" oninput="handleNameInput(this.value)" placeholder="YOUR NAME"></div><div class="flex items-center gap-1"><span>DATE:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="TODAY"></div></div>
+            </div>
+            <div class="page-center-content">
+                <div class="print-scale-down relative w-full max-w-[550px] aspect-square mb-6"><svg id="wheel-svg" viewBox="0 0 600 600" class="w-full h-full"></svg></div>
+                <div id="bottom-memos" class="print-scale-down w-full mt-2">
+                    <div class="flex items-center gap-3 mb-4"><div class="h-px bg-gray-200 flex-grow"></div><span class="text-xs font-serif uppercase tracking-widest text-gray-400">Quick Notes</span><div class="h-px bg-gray-200 flex-grow"></div></div>
+                    <div id="memo-grid" class="grid grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+            <div class="no-print w-full mt-8 pt-6 border-t border-gray-100 flex-shrink-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">Adjust Scores <span class="text-[10px] font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Drag sliders to evaluate</span></h3>
+                    <button onclick="tryResetScores()" class="text-xs text-red-500 hover:underline">Reset Scores</button>
+                </div>
+                <div id="slider-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: Tracker -->
+    <div id="view-tracker" class="tab-content">
+        <div class="print-page rounded-xl shadow-xl border border-gray-200">
+            <div class="print-header-wrapper w-full flex justify-between items-start border-b border-gray-200 pb-4">
+                <div>
+                    <h2 class="text-3xl font-serif text-gray-900 tracking-tight">Weekly Tracker</h2>
+                    <p class="text-sm text-gray-500 font-serif italic mt-1">Collecting tokens of life.</p>
+                </div>
+                <div class="flex flex-col items-end w-1/2">
+                    <div class="w-full text-white px-4 py-3 rounded-xl shadow-md flex flex-col gap-2 mb-2" style="background-color: var(--c-success);">
+                        <div class="flex justify-between items-center">
+                            <div class="text-[10px] uppercase tracking-wider text-white opacity-80">Total Tokens</div>
+                            <!-- V7.11 Fix: Changed to items-baseline for export stability -->
+                            <div class="flex items-baseline gap-1 font-mono total-tokens-container">
+                                <span class="text-2xl font-bold leading-none text-white" id="global-token-count">0</span>
+                                <span class="text-sm opacity-80 pb-0.5">/</span>
+                                <input type="number" id="weekly-goal-input" value="20" oninput="handleGoalChange(this.value)" class="goal-input text-lg leading-none pb-0.5" title="Click to set weekly goal">
+                            </div>
+                        </div>
+                        <div class="w-full h-2 bg-white/30 rounded-full overflow-hidden">
+                            <div id="global-progress-bar" class="h-full bg-white transition-all duration-700 ease-out" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="text-right text-xs text-gray-400 font-mono gap-1">
+                         <p class="name-display">NAME: HALO</p>
+                         <div class="flex items-center gap-1 justify-end"><span>WEEK OF:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="DATE RANGE"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="tracker-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 print-scale-down"></div>
+            <div class="mt-8 pt-6 border-t border-gray-100 text-center flex-shrink-0"><p class="text-sm text-gray-400 font-serif italic">"Define your own success."</p></div>
+        </div>
+    </div>
+
+    <!-- VIEW 3: Statistics -->
+    <div id="view-stats" class="tab-content">
+        <div class="print-page rounded-xl shadow-xl border border-gray-200">
+            <div class="print-header-wrapper w-full flex justify-between items-end border-b border-gray-200 pb-4">
+                <div><h2 class="text-3xl font-serif text-gray-900 tracking-tight">Weekly Statistics</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Visualizing your flow and growth.</p></div>
+                <div class="text-right text-xs text-gray-400 font-mono flex flex-col items-end gap-1"><p class="name-display">NAME: HALO</p><div class="flex items-center gap-1 justify-end"><span>DATE:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="DATE"></div></div>
+            </div>
+
+            <div class="page-center-content w-full flex flex-col gap-8">
+                
+                <!-- Chart 1: Time Flow (Horizontal Bars) -->
+                <div class="w-full">
+                    <h3 class="font-serif text-lg font-bold text-gray-800 mb-4 pl-1 border-l-4 border-gray-300">Time Flow (Minutes)</h3>
+                    <div class="bg-gray-50 rounded-xl p-6 border border-gray-100 shadow-inner">
+                        <div id="stats-time-chart" class="w-full flex flex-col gap-3 min-h-[100px] justify-center text-gray-400 text-sm italic text-center">
+                            <!-- JS Generated -->
+                            No timed activities recorded yet.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Life Skyline (Vertical Bars) -->
+                <div class="w-full flex-grow flex flex-col">
+                    <h3 class="font-serif text-lg font-bold text-gray-800 mb-4 pl-1 border-l-4 border-gray-300">Life Skyline (Token Build)</h3>
+                    <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex-grow flex items-end justify-center">
+                        <svg id="stats-skyline-chart" width="100%" height="300" class="w-full h-[300px]"></svg>
+                    </div>
+                </div>
+
+            </div>
+            <div class="mt-8 pt-6 border-t border-gray-100 text-center flex-shrink-0"><p class="text-sm text-gray-400 font-serif italic">"Building your life, one block at a time."</p></div>
+        </div>
+    </div>
+
+    <!-- VIEW 4: Journal -->
+    <div id="view-journal" class="tab-content">
+        <div class="print-page rounded-xl shadow-xl border border-gray-200">
+            <div class="print-header-wrapper w-full flex justify-between items-end border-b border-gray-200 pb-4">
+                <div><h2 class="text-3xl font-serif text-gray-900 tracking-tight">Journal & Insights</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Deep Dive & Reflection</p></div>
+                <div class="text-right text-xs text-gray-400 font-mono flex flex-col items-end gap-1"><p class="name-display">NAME: HALO</p><div class="flex items-center gap-1 justify-end"><span>DATE:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="DATE"></div></div>
+            </div>
+            <div id="summary-list" class="space-y-6 print-scale-down"></div>
+            <div class="mt-8 pt-6 border-t border-gray-100 text-center flex-shrink-0"><p class="text-sm text-gray-400 font-serif italic">"Core-in: Finding meaning in the void."</p></div>
+        </div>
+    </div>
+
+    <!-- 临时导出容器 -->
+    <div id="export-container" class="export-mode"></div>
+
+    <script>
+        // --- Core Libraries ---
+        const iconLib = { 'feather': '<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line>', 'briefcase': '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>', 'diamond': '<path d="M6 3h12l4 6-10 13L2 9z"></path>', 'zap': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>', 'heart': '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>', 'eye': '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>', 'book': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>', 'coffee': '<path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line>', 'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>', 'sun': '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>', 'moon': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>', 'fire': '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3.3a7 7 0 0 0 4 3.8z"></path>', 'anchor': '<circle cx="12" cy="5" r="3"></circle><line x1="12" y1="22" x2="12" y2="8"></line><path d="M5 12H2a10 10 0 0 0 20 0h-3"></path>', 'smile': '<circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line>', 'droplet': '<path d="M12 2.69l5.74 9.2a6 6 0 1 1-11.48 0z"></path>', 'leaf': '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>', 'music': '<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>', 'camera': '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle>', 'home': '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>', 'gift': '<polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 1 0-5C13 2 12 7 12 7z"></path>' };
+        const morandiColors = [ '#748E9A', '#8F9E8B', '#B79395', '#D4C4A9', '#A696A8', '#9E9E9E', '#809B9B', '#CDBBA7', '#8DA399', '#B5A89E', '#9A8F97', '#8B949E', '#A9B7C4', '#C4B7A9', '#9EA6B7', '#B79E9E' ];
+        const defaultDimensions = [ { id: 'mission', label: '使命与创造', sub: 'Mission & Creation', color: '#748E9A', icon:'feather', tip: '' }, { id: 'finance', label: '财务安全', sub: 'Financial Safety', color: '#8F9E8B', icon:'briefcase', tip: '' }, { id: 'beauty', label: '对美的追求', sub: 'Pursuit of Beauty', color: '#B79395', icon:'diamond', tip: '' }, { id: 'energy', label: '精力与睡眠', sub: 'Energy & Sleep', color: '#D4C4A9', icon:'zap', tip: '' }, { id: 'intimacy', label: '亲密连接', sub: 'Intimacy & Cat', color: '#A696A8', icon:'heart', tip: '' }, { id: 'mirror', label: '镜像与投射', sub: 'The Mirror & Projection', color: '#9E9E9E', icon:'eye', tip: '' }, { id: 'wisdom', label: '智慧与学习', sub: 'Wisdom & Study', color: '#809B9B', icon:'book', tip: '' }, { id: 'rest', label: '放空与滋养', sub: 'Rest & Play', color: '#CDBBA7', icon:'coffee', tip: '' } ];
+        
+        // --- Updated Defaults Here ---
+        const defaultGlobalActions = [ 
+            { id: 'a1', t: 'AI学习/练习', count: 0, mode: 'count', dims: ['mission', 'wisdom'] }, 
+            { id: 'a2', t: '投资资讯阅读', count: 0, mode: 'count', dims: ['mission', 'finance', 'wisdom'] }, 
+            { id: 'a3', t: '运动/拉伸/瑜伽', count: 0, mode: 'time', minPerToken: 30, totalMinutes: 0, dims: ['beauty', 'energy'] }, 
+            { id: 'a4', t: '照顾猫咪(饮水/梳毛)', count: 0, mode: 'count', dims: ['intimacy', 'rest'] }, 
+            { id: 'a5', t: '记账复盘', count: 0, mode: 'count', dims: ['finance'] }, 
+            { id: 'a6', t: '擦地/整理空间', count: 0, mode: 'count', dims: ['beauty'] }, 
+            { id: 'a7', t: '早睡/规律睡眠', count: 0, mode: 'count', dims: ['energy'] }, 
+            { id: 'a8', t: '深度对话/日记', count: 0, mode: 'count', dims: ['mirror', 'wisdom'] } 
+        ];
+        
+        let state = { name: 'HALO', activeTab: 'wheel', weeklyGoal: 20, dimensions: [], scores: {}, memos: {}, dimTargets: {}, globalActions: [], dateRange: '' };
+        let editingActionId = null; 
+
+        // Confirm Modal
+        let pendingConfirmAction = null;
+        function showConfirm(title, message, isAlert = false, action = null) {
+            document.getElementById('confirm-title').innerText = title; document.getElementById('confirm-msg').innerText = message;
+            const cancelBtn = document.getElementById('confirm-cancel-btn'); const yesBtn = document.getElementById('confirm-yes-btn');
+            if (isAlert) { cancelBtn.style.display = 'none'; yesBtn.innerText = 'OK'; yesBtn.onclick = closeConfirm; } else { cancelBtn.style.display = 'inline-block'; yesBtn.innerText = 'Confirm'; pendingConfirmAction = action; yesBtn.onclick = doConfirm; }
+            document.getElementById('confirm-modal').classList.add('modal-open');
+        }
+        function closeConfirm() { document.getElementById('confirm-modal').classList.remove('modal-open'); pendingConfirmAction = null; }
+        function doConfirm() { if(pendingConfirmAction) pendingConfirmAction(); closeConfirm(); }
+
+        // Print Selection Modal
+        function openPrintModal() { document.getElementById('print-modal').classList.add('modal-open'); }
+        function closePrintModal() { document.getElementById('print-modal').classList.remove('modal-open'); }
+        
+        // --- NEW: PDF Print Function ---
+        function confirmPrint() {
+            const checkboxes = document.querySelectorAll('.print-option:checked');
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            if(selectedIds.length === 0) return alert("Please select at least one page.");
+            
+            // Clean up old print classes
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('print-me'));
+            
+            // Add print class to selected pages
+            selectedIds.forEach(id => { 
+                const el = document.getElementById(id); 
+                if(el) el.classList.add('print-me'); 
+            });
+            
+            // Force re-render to ensure charts are fresh
+            renderWheelView(); renderTrackerView(); renderJournalView(); renderStatsView();
+            
+            closePrintModal(); 
+            
+            // Slight delay to allow DOM to update before printing
+            setTimeout(() => { window.print(); }, 500);
+        }
+
+        // --- NEW: HD Image Export Logic ---
+        async function exportImage() {
+            const checkboxes = document.querySelectorAll('.print-option:checked');
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            if(selectedIds.length === 0) return alert("Please select at least one page.");
+
+            const btn = document.getElementById('btn-export-img');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Generating... (Please wait)';
+            btn.disabled = true;
+
+            // Force refresh data
+            renderWheelView(); renderTrackerView(); renderJournalView(); renderStatsView();
+
+            const exportContainer = document.getElementById('export-container');
+            exportContainer.innerHTML = ''; // Clear previous
+
+            // Clone selected views into export container
+            selectedIds.forEach(id => {
+                const original = document.getElementById(id);
+                // We need to clone the 'print-page' inside the view
+                const pageContent = original.querySelector('.print-page');
+                if (pageContent) {
+                    const clone = pageContent.cloneNode(true);
+                    
+                    // Cleanup clone: Convert inputs to spans for better rendering
+                    const inputs = clone.querySelectorAll('input, textarea');
+                    inputs.forEach(input => {
+                        const span = document.createElement('span');
+                        span.textContent = input.value;
+                        span.className = input.className; // Keep styles
+                        // Fix for input styling in export
+                        span.style.display = 'inline-block';
+                        span.style.padding = '0 4px';
+                        span.style.lineHeight = '1.5';
+                        span.style.fontFamily = 'inherit';
+                        span.style.fontSize = 'inherit';
+                        
+                        // Fix for textarea newlines
+                        if(input.tagName === 'TEXTAREA') {
+                            span.innerHTML = input.value.replace(/\n/g, '<br>');
+                            span.style.whiteSpace = 'pre-wrap';
+                            span.style.textAlign = 'left';
+                            span.style.width = '100%';
+                        }
+                        input.parentNode.replaceChild(span, input);
+                    });
+
+                    // Remove buttons from clone
+                    const btns = clone.querySelectorAll('button, .no-print');
+                    btns.forEach(b => b.remove());
+                    
+                    // Fix alignment for Total Tokens in export clone
+                    const tokenContainer = clone.querySelector('.total-tokens-container');
+                    if(tokenContainer) {
+                        tokenContainer.classList.remove('items-end');
+                        tokenContainer.classList.add('items-baseline');
+                    }
+
+                    exportContainer.appendChild(clone);
+                }
+            });
+
+            // Wait a moment for DOM to settle
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            try {
+                const canvas = await html2canvas(exportContainer, {
+                    scale: 3, // HD Quality (3x)
+                    useCORS: true, // Handle SVGs better
+                    backgroundColor: '#ffffff',
+                    // V7.11 Fix: Logging for debug
+                    onclone: (clonedDoc) => {
+                        console.log("Canvas cloned, applying safety styles...");
+                        const expMode = clonedDoc.querySelector('.export-mode');
+                        if(expMode) expMode.style.overflow = 'visible';
+                    }
+                });
+
+                // Trigger Download
+                const link = document.createElement('a');
+                link.download = `Halo_Life_Dashboard_${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+            } catch (err) {
+                console.error(err);
+                alert("Error generating image. Please try again.");
+            } finally {
+                // Cleanup
+                exportContainer.innerHTML = '';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                closePrintModal();
+            }
+        }
+
+        // Init & Migration
+        function init() {
+            const saved = localStorage.getItem('haloDashboardV6_0');
+            if (saved) { 
+                try { 
+                    const p = JSON.parse(saved); 
+                    state.name = p.name || 'HALO'; state.weeklyGoal = p.weeklyGoal || 20; state.activeTab = p.activeTab || 'wheel';
+                    state.dateRange = p.dateRange || new Date().toLocaleDateString('en-US'); // Default to today if empty
+                    if (p.dimensions && Array.isArray(p.dimensions) && p.dimensions.length > 0) state.dimensions = p.dimensions;
+                    else { state.dimensions = JSON.parse(JSON.stringify(defaultDimensions)); if(p.customLabels) state.dimensions.forEach(d => { if(p.customLabels[d.id]) d.label = p.customLabels[d.id]; if(p.customSubs && p.customSubs[d.id]) d.sub = p.customSubs[d.id]; if(p.customActions && p.customActions[d.id]) d.tip = p.customActions[d.id]; if(p.customIcons && p.customIcons[d.id]) d.icon = p.customIcons[d.id]; }); }
+                    state.scores = p.scores || {}; state.dimensions.forEach(d => { if(state.scores[d.id] === undefined) state.scores[d.id] = 5; });
+                    state.memos = p.memos || {}; state.dimTargets = p.dimTargets || {};
+                    state.globalActions = p.globalActions || JSON.parse(JSON.stringify(defaultGlobalActions));
+                    state.globalActions.forEach(a => { if(a.count === undefined) { a.count = a.d ? 1 : 0; delete a.d; } if(!a.mode) a.mode = 'count'; if(a.mode === 'time') { if(a.totalMinutes === undefined) a.totalMinutes = 0; if(a.minPerToken === undefined) a.minPerToken = 30; } });
+                } catch(e){ console.error("Migration error", e); executeReset(); } 
+            } else { executeReset(); }
+            
+            // Set input values
+            document.querySelectorAll('.name-input').forEach(el => el.value = state.name || 'HALO');
+            document.querySelectorAll('.date-input').forEach(el => el.value = state.dateRange);
+            
+            updateNameDisplay();
+
+            renderWheelView(); renderTrackerView(); renderJournalView(); renderStatsView();
+            switchTab(state.activeTab || 'wheel');
+        }
+
+        function executeReset() { state.dimensions = JSON.parse(JSON.stringify(defaultDimensions)); state.globalActions = JSON.parse(JSON.stringify(defaultGlobalActions)); state.scores = {}; state.memos = {}; state.dimTargets = {}; state.dimensions.forEach(d => { state.scores[d.id] = 5; }); state.weeklyGoal = 20; state.dateRange = new Date().toLocaleDateString('en-US'); saveData(); }
+        function saveData() { localStorage.setItem('haloDashboardV6_0', JSON.stringify(state)); if(state.activeTab === 'wheel') renderSVG(); if(state.activeTab === 'stats') renderStatsView(); }
+        function switchTab(tab) {
+            state.activeTab = tab; saveData();
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${tab}`).classList.add('active');
+            ['wheel', 'tracker', 'journal', 'stats'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tab) btn.className = "whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all shadow bg-white text-gray-900";
+                else btn.className = "whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900";
+            });
+            if(tab === 'tracker') renderTrackerView();
+            if(tab === 'journal') renderJournalView();
+            if(tab === 'stats') renderStatsView();
+        }
+
+        function getIconSvg(key, size=16) { const path = iconLib[key] || iconLib['star']; return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; }
+        function getDimTarget(catId, taskCount) { const saved = state.dimTargets[catId]; if(saved !== undefined && saved !== null) return parseInt(saved); return Math.max(taskCount * 3, 5); } 
+        function handleNameInput(val) { state.name = val.toUpperCase(); document.querySelectorAll('.name-input').forEach(el => el.value = state.name); updateNameDisplay(); saveData(); }
+        function handleDateInput(val) { state.dateRange = val; document.querySelectorAll('.date-input').forEach(el => el.value = state.dateRange); saveData(); }
+        function updateNameDisplay() { document.querySelectorAll('.name-display').forEach(el => el.innerText = `NAME: ${state.name}`); }
+        function handleGoalChange(val) { state.weeklyGoal = parseInt(val) || 1; saveData(); }
+        function handleDimTargetChange(catId, val) { const num = parseInt(val); state.dimTargets[catId] = num >= 1 ? num : 1; saveData(); }
+        function handleScoreInput(id, val) { state.scores[id] = parseFloat(val); document.getElementById(`val-${id}`).innerText = val; saveData(); renderSVG(); }
+        function handleMemoText(id, val) { state.memos[id] = val; saveData(); }
+        function updateActionCount(id, delta) { const action = state.globalActions.find(a => a.id === id); if(action) { if(action.mode === 'time') { const step = 15; const newTime = (action.totalMinutes || 0) + (delta * step); if(newTime >= 0) action.totalMinutes = newTime; } else { if(action.count === undefined) action.count = 0; const newVal = action.count + delta; if(newVal >= 0) action.count = newVal; } saveData(); renderTrackerView(); } }
+        function calculateActionTokens(action) { if (action.mode === 'time') return (action.totalMinutes || 0) / (action.minPerToken || 60); return action.count || 0; }
+        function formatTime(mins) { if(!mins) return "0m"; const h = Math.floor(mins / 60); const m = mins % 60; if(h > 0) return `${h}h ${m}m`; return `${m}m`; }
+        function tryResetToDefault() { showConfirm("Reset Everything?", "确定要重置所有数据为默认状态吗？这将清除你所有的自定义维度和记录。", false, () => { executeReset(); closeAdvancedModal(); renderWheelView(); renderTrackerView(); renderJournalView(); }); }
+        function tryResetScores() { showConfirm("Reset Scores?", "Are you sure you want to reset all assessment scores to zero?", false, () => { Object.keys(state.scores).forEach(k=>state.scores[k]=0); saveData(); renderWheelView(); }); }
+        function deleteAction(id) { showConfirm("Delete Action?", "Are you sure you want to remove this action from your tracker?", false, () => { state.globalActions = state.globalActions.filter(a => a.id !== id); saveData(); renderTrackerView(); }); }
+
+        // --- Modals & Dim Mgmt ---
+        function addNewDimension() { const newId = 'dim_' + Date.now(); const randomColor = morandiColors[Math.floor(Math.random() * morandiColors.length)]; const newDim = { id: newId, label: 'New Dimension', sub: 'Subtitle', color: randomColor, icon: 'star', tip: '' }; state.dimensions.push(newDim); state.scores[newId] = 5; renderAdvancedModalContent(); saveData(); }
+        function tryRemoveDimension(id) { if(state.dimensions.length <= 3) { showConfirm("Action Denied", "至少保留3个维度以维持生命之轮形状。", true); return; } showConfirm("Delete Dimension?", "确定要删除这个维度吗？关联的分数和行动标记将被清理。", false, () => { state.dimensions = state.dimensions.filter(d => d.id !== id); delete state.scores[id]; delete state.memos[id]; state.globalActions.forEach(a => { a.dims = a.dims.filter(d => d !== id); }); renderAdvancedModalContent(); saveData(); }); }
+        function handleAdvancedChange(id, field, val) { const dim = state.dimensions.find(d => d.id === id); if(!dim) return; if(field === 'label') dim.label = val; if(field === 'sub') dim.sub = val; if(field === 'tip') dim.tip = val; if(field === 'icon') dim.icon = val; if(field === 'color') dim.color = val; if(field === 'icon') { const preview = document.getElementById(`icon-preview-${id}`); if(preview) preview.innerHTML = getIconSvg(val, 16); } saveData(); }
+        function openAdvancedModal() { renderAdvancedModalContent(); document.getElementById('advanced-modal').classList.add('modal-open'); }
+        function closeAdvancedModal() { document.getElementById('advanced-modal').classList.remove('modal-open'); saveData(); renderWheelView(); renderTrackerView(); renderJournalView(); renderStatsView(); }
+        function renderAdvancedModalContent() { const grid = document.getElementById('advanced-grid'); grid.innerHTML = state.dimensions.map(k => `<div class="grid grid-cols-12 gap-2 md:gap-4 items-center bg-gray-50 p-2 rounded border border-gray-100 hover:border-gray-300 transition-colors"><div class="col-span-1 flex justify-center"><input type="color" value="${k.color}" onchange="handleAdvancedChange('${k.id}', 'color', this.value)" class="w-6 h-6 rounded-full overflow-hidden cursor-pointer" title="Change Color"></div><div class="col-span-1 flex flex-col items-center gap-1"><div id="icon-preview-${k.id}" style="color:${k.color}">${getIconSvg(k.icon, 16)}</div><select onchange="handleAdvancedChange('${k.id}', 'icon', this.value)" class="w-full border rounded px-0 py-0 text-[10px] bg-white text-gray-600 focus:outline-none cursor-pointer text-center h-4">${Object.keys(iconLib).map(key => `<option value="${key}" ${k.icon === key ? 'selected' : ''}>${key.substr(0,3)}</option>`).join('')}</select></div><div class="col-span-3"><input type="text" value="${k.label}" oninput="handleAdvancedChange('${k.id}', 'label', this.value)" class="w-full border rounded px-2 py-1 text-xs md:text-sm focus:ring-1 focus:ring-blue-200 border-gray-300 font-bold text-gray-700" placeholder="Title"></div><div class="col-span-3"><input type="text" value="${k.sub}" oninput="handleAdvancedChange('${k.id}', 'sub', this.value)" class="w-full border rounded px-2 py-1 text-xs md:text-sm focus:ring-1 focus:ring-blue-200 border-gray-300 text-gray-600" placeholder="Subtitle"></div><div class="col-span-3"><input type="text" value="${k.tip || ''}" oninput="handleAdvancedChange('${k.id}', 'tip', this.value)" class="w-full border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-200 border-gray-300 text-gray-500 italic" placeholder="Tooltip hint"></div><div class="col-span-1 text-center"><button onclick="tryRemoveDimension('${k.id}')" class="text-gray-300 hover:text-red-500 transition-colors p-1" title="Delete Dimension"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div></div>`).join(''); }
+        function toggleModeInputs() { const mode = document.querySelector('input[name="action-mode"]:checked').value; const timerOpts = document.getElementById('timer-options'); if(mode === 'time') timerOpts.classList.remove('hidden'); else timerOpts.classList.add('hidden'); }
+        function openActionModal(actionId = null, defaultDim = null) { editingActionId = actionId; const modal = document.getElementById('action-modal'); const title = document.getElementById('modal-title'); const input = document.getElementById('modal-action-text'); const dimGrid = document.getElementById('modal-dim-grid'); const minInput = document.getElementById('modal-min-per-token'); const radios = document.getElementsByName('action-mode'); title.innerText = actionId ? 'Edit Action' : 'Add New Action'; let currentDims = []; if (actionId) { const action = state.globalActions.find(a => a.id === actionId); input.value = action.t; currentDims = action.dims; const mode = action.mode || 'count'; radios.forEach(r => r.checked = (r.value === mode)); if(mode === 'time') minInput.value = action.minPerToken || 30; else minInput.value = 30; } else { input.value = ''; radios[0].checked = true; minInput.value = 30; if(defaultDim) currentDims = [defaultDim]; } toggleModeInputs(); dimGrid.innerHTML = state.dimensions.map(cat => { const isChecked = currentDims.includes(cat.id); return `<label class="flex items-center space-x-2 p-2 border rounded cursor-pointer hover:bg-gray-50 ${isChecked ? 'bg-blue-50 border-blue-200' : ''}"><input type="checkbox" class="form-checkbox h-4 w-4 text-blue-600" value="${cat.id}" ${isChecked ? 'checked' : ''}><span class="text-xs font-medium" style="color:${cat.color}">${cat.label}</span></label>`; }).join(''); modal.classList.add('modal-open'); }
+        function closeActionModal() { document.getElementById('action-modal').classList.remove('modal-open'); editingActionId = null; }
+        function saveAction() { const text = document.getElementById('modal-action-text').value; if (!text) return alert("Please enter action name"); const checkboxes = document.querySelectorAll('#modal-dim-grid input[type="checkbox"]:checked'); const selectedDims = Array.from(checkboxes).map(cb => cb.value); const mode = document.querySelector('input[name="action-mode"]:checked').value; const minPerToken = parseInt(document.getElementById('modal-min-per-token').value) || 30; if (editingActionId) { const action = state.globalActions.find(a => a.id === editingActionId); action.t = text; action.dims = selectedDims; action.mode = mode; if(mode === 'time') action.minPerToken = minPerToken; } else { state.globalActions.push({ id: Date.now().toString(), t: text, count: 0, mode: mode, minPerToken: minPerToken, totalMinutes: 0, dims: selectedDims }); } saveData(); closeActionModal(); renderTrackerView(); }
+
+        // --- View Renders ---
+        function renderWheelView() { renderSVG(); renderBottomMemos(); renderSliders(); }
+        function renderTrackerView() { const grid = document.getElementById('tracker-grid'); let globalTokenCount = 0; const gridHtml = state.dimensions.map(cat => { const tasks = state.globalActions.filter(a => a.dims.includes(cat.id)); let dimTokens = 0; tasks.forEach(t => { dimTokens += calculateActionTokens(t); }); const target = getDimTarget(cat.id, tasks.length); let progress = target > 0 ? (dimTokens / target) * 100 : 0; if(progress > 100) progress = 100; const isOverachieved = dimTokens >= target; const progressColor = isOverachieved ? 'var(--c-accent)' : cat.color; return `<div class="border rounded-lg p-4 bg-gray-50 flex flex-col gap-3 relative overflow-hidden"><div class="absolute top-0 left-0 w-full h-1" style="background-color: ${cat.color}"></div><div class="flex justify-between items-start"><div><h3 class="font-bold serif text-md" style="color:${cat.color}">${cat.label}</h3><p class="text-xs text-gray-400 uppercase tracking-wider">${cat.sub}</p></div><div class="text-right flex items-center gap-1 bg-white px-2 py-1 rounded shadow-sm border border-gray-100"><span class="text-${cat.color}" style="color:${cat.color}">${getIconSvg(cat.icon, 18)}</span><span class="text-xs text-gray-400">Total</span><span class="text-lg font-mono font-bold" style="color:${cat.color}">${Math.floor(dimTokens * 10) / 10}</span><span class="text-xs text-gray-400 mx-1">/</span><span class="text-xs text-gray-400 mr-1">🎯</span><input type="number" value="${target}" onchange="handleDimTargetChange('${cat.id}', this.value)" class="dim-target-input text-lg font-mono font-bold text-gray-400 hover:text-gray-600 focus:text-gray-800" style="width: 2em;"></div></div><div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="h-full transition-all duration-500" style="width: ${progress}%; background-color: ${progressColor}"></div></div><div class="flex flex-col gap-2 mt-1">${tasks.map((task) => { const associatedColors = task.dims.map(d => { const found = state.dimensions.find(c => c.id === d); return found ? found.color : '#ccc'; }); const tokens = calculateActionTokens(task); globalTokenCount += tokens; let controlHtml = ''; if(task.mode === 'time') { controlHtml = `<div class="flex items-center bg-white rounded-md shadow-sm border border-gray-100 overflow-hidden"><button class="counter-btn minus" onclick="updateActionCount('${task.id}', -1)" title="-15 min">-</button><div class="px-2 text-center font-mono font-bold text-gray-700 text-xs select-none min-w-[50px]">${formatTime(task.totalMinutes)}</div><button class="counter-btn plus" onclick="updateActionCount('${task.id}', 1)" title="+15 min">+</button></div><span class="timer-badge" title="${task.minPerToken}m = 1 Token">✨${tokens.toFixed(1)}</span>`; } else { controlHtml = `<div class="flex items-center bg-white rounded-md shadow-sm border border-gray-100 overflow-hidden"><button class="counter-btn minus" onclick="updateActionCount('${task.id}', -1)">-</button><div class="w-8 text-center font-mono font-bold text-gray-700 text-sm select-none">${task.count || 0}</div><button class="counter-btn plus" onclick="updateActionCount('${task.id}', 1)">+</button></div>`; } return `<div class="flex items-center gap-2 group row-hover py-1"><div class="flex-grow flex flex-col justify-center"><span class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600 truncate" onclick="openActionModal('${task.id}')" title="Edit: ${task.t}">${task.t}</span><div class="flex mt-1 items-center h-2">${associatedColors.map(c => `<span class="multi-tag-dot" style="background-color:${c}"></span>`).join('')}</div></div>${controlHtml}<button onclick="deleteAction('${task.id}')" class="delete-task-btn opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-opacity p-1 ml-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`}).join('')}</div><button onclick="openActionModal(null, '${cat.id}')" class="add-task-btn mt-2 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 border-t border-dashed border-gray-200 pt-2 transition-colors w-full"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Action</button></div>`; }).join(''); grid.innerHTML = gridHtml; updateGlobalCounter(globalTokenCount); }
+        function updateGlobalCounter(count) { const counter = document.getElementById('global-token-count'); const goalInput = document.getElementById('weekly-goal-input'); const bar = document.getElementById('global-progress-bar'); if(counter && goalInput) { if(document.activeElement !== goalInput) goalInput.value = state.weeklyGoal; const oldVal = parseFloat(counter.innerText || '0'); if(Math.abs(oldVal - count) > 0.01) { const displayCount = Number.isInteger(count) ? count : count.toFixed(1); counter.innerText = displayCount; counter.classList.remove('token-pop'); void counter.offsetWidth; counter.classList.add('token-pop'); } const goal = state.weeklyGoal || 1; const percentage = Math.min((count / goal) * 100, 100); if(bar) { bar.style.width = `${percentage}%`; if(percentage >= 100) { bar.classList.remove('bg-accent'); bar.classList.add('bg-success'); } else { bar.classList.add('bg-accent'); bar.classList.remove('bg-success'); } } } }
+        function renderJournalView() { const list = document.getElementById('summary-list'); list.innerHTML = state.dimensions.map(cat => { const score = state.scores[cat.id] || 0; const text = state.memos[cat.id]; const hasText = text && text.trim().length > 0; const formattedText = hasText ? text.replace(/\n/g, '<br>') : ''; const completedTasks = state.globalActions.filter(a => a.dims.includes(cat.id)).filter(a => calculateActionTokens(a) > 0).map(a => { if(a.mode === 'time') return `${a.t} <span class="text-gray-400 text-[10px] ml-1">(${formatTime(a.totalMinutes)})</span>`; return `${a.t} <span class="text-gray-400 text-[10px] ml-1">(x${a.count})</span>`; }); const hasActivity = hasText || completedTasks.length > 0; return `<div class="flex gap-6 items-start"><div class="w-1/3 pt-1"><h3 class="font-bold serif text-lg" style="color:${cat.color}">${cat.label}</h3><p class="text-xs text-gray-400 uppercase tracking-wider mb-1">${cat.sub}</p><div class="flex items-center gap-2"><span class="text-2xl font-bold font-mono" style="color:${cat.color}">${score}</span><span class="text-xs text-gray-400">/ 10</span></div>${completedTasks.length > 0 ? `<div class="mt-3 pt-2 border-t border-gray-100"><p class="text-[10px] text-gray-400 font-bold mb-1">TOKENS EARNED:</p><ul class="text-[10px] text-gray-500 list-disc list-inside">${completedTasks.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}</div><div class="w-2/3">${hasText ? `<div class="p-4 rounded-lg bg-gray-50 border border-gray-100 text-gray-700 text-sm leading-relaxed font-serif" style="border-left: 3px solid ${cat.color}">${formattedText}</div>` : (!hasActivity ? `<div class="p-4 rounded-lg border border-dashed border-gray-200 text-gray-300 text-xs italic text-center">暂无记录 (No notes or tokens)</div>` : '')}</div></div>`; }).join(''); }
+        function renderSliders() { document.getElementById('slider-grid').innerHTML=state.dimensions.map(k=>`<div class="space-y-1"><div class="flex justify-between items-center"><span class="text-xs font-medium text-gray-700 truncate pr-2" style="color:${k.color}">${k.label}</span><span id="val-${k.id}" class="text-xs font-bold" style="color:${k.color}">${state.scores[k.id]}</span></div><input type="range" min="0" max="10" step="0.5" value="${state.scores[k.id]}" oninput="handleScoreInput('${k.id}',this.value)" class="slider-thumb" style="accent-color:${k.color};background-image:linear-gradient(${k.color},${k.color})"></div>`).join(''); }
+        function renderBottomMemos() { document.getElementById('memo-grid').innerHTML = state.dimensions.map(k => `<div class="border rounded-lg p-2 relative h-24" style="border-color:${k.color}80; background-color:${k.color}08"><div class="absolute -top-2.5 left-3 bg-white px-2 text-xs font-bold serif truncate max-w-[90%]" style="color:${k.color}">${k.label}</div><textarea class="w-full h-full bg-transparent text-xs text-gray-700 leading-relaxed resize-none focus:outline-none p-1 pt-2" placeholder="Notes..." oninput="handleMemoText('${k.id}', this.value)">${state.memos[k.id] || ''}</textarea></div>`).join(''); }
+        function renderSVG() { const center=300, radius=180, svg=document.getElementById('wheel-svg'); const count = state.dimensions.length; const angleStep = (Math.PI * 2) / count; let c=''; const gp=(i,v,m=10)=>{ const a = angleStep * i - Math.PI/2; const r = (radius*v)/m; return {x:center+r*Math.cos(a), y:center+r*Math.sin(a)} }; for(let i=1;i<=10;i++){ let d=''; for(let j=0;j<count;j++){ const p=gp(j,i); d+=`${j===0?'M':'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)} `; } c+=`<path d="${d}Z" fill="none" stroke="${i===10?'#9ca3af':'#e5e7eb'}" stroke-width="${i===10?1.5:1}"/>`; } for(let i=0;i<count;i++){ const p=gp(i,10); c+=`<line x1="${center}" y1="${center}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="#e5e7eb"/>`; } [2,4,6,8,10].forEach(v=>c+=`<text x="${center+4}" y="${center-(radius*v)/10}" font-size="9" fill="#d1d5db">${v}</text>`); if(count > 2){ let d=''; state.dimensions.forEach((k,i)=>{ const p=gp(i,state.scores[k.id]); d+=`${i===0?'M':'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)} `; }); c+=`<path d="${d}Z" fill="rgba(107,114,128,0.15)" stroke="#6b7280" stroke-width="2"/>`; state.dimensions.forEach((k,i)=>{ const p=gp(i,state.scores[k.id]); c+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${k.color}"/>`; }); } state.dimensions.forEach((k,i)=>{ const labelDist = radius + 35; const a = angleStep * i - Math.PI/2; const tx = center + labelDist * Math.cos(a); const ty = center + labelDist * Math.sin(a); let ta="middle"; if(Math.abs(tx-center) > 10) ta = tx > center ? "start" : "end"; const tc = k.color; const hint = k.tip; const eventAttrs = `onmouseenter="showTooltip(event, '${hint}', '${k.color}')" onmouseleave="hideTooltip()" onmousemove="moveTooltip(event)"`; c+=`<g class="interactive-label" ${eventAttrs}><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${ta}" dominant-baseline="middle" font-weight="bold" font-size="12" font-family="Noto Serif SC, serif" fill="${tc}">${k.label}</text><text x="${tx.toFixed(1)}" y="${(ty+12).toFixed(1)}" text-anchor="${ta}" dominant-baseline="middle" font-size="9" fill="#9ca3af" letter-spacing="1" style="text-transform:uppercase">${k.sub}</text>`; let bx=tx-40; if(ta==="start") bx=tx; if(ta==="end") bx=tx-80; const by=(ty+22).toFixed(1); c+=`<rect x="${bx}" y="${by}" width="80" height="24" rx="4" fill="${k.color}" fill-opacity="0.1" stroke="${k.color}" stroke-width="1"/><text x="${bx+40}" y="${parseFloat(by)+12}" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="bold" fill="${k.color}">${state.scores[k.id]}</text></g>`; }); c+=`<circle cx="${center}" cy="${center}" r="3" fill="#333"/>`; svg.innerHTML=c; }
+
+        // --- NEW: Stats Logic (V7.5/7.9) ---
+        function renderStatsView() {
+            // 1. Time Flow Chart
+            const timeContainer = document.getElementById('stats-time-chart');
+            const timedActions = state.globalActions
+                .filter(a => a.mode === 'time' && (a.totalMinutes || 0) > 0)
+                .sort((a,b) => b.totalMinutes - a.totalMinutes);
+
+            if (timedActions.length === 0) {
+                timeContainer.innerHTML = 'No timed activities recorded yet.';
+            } else {
+                const maxTime = Math.max(...timedActions.map(a => a.totalMinutes));
+                timeContainer.innerHTML = timedActions.map(a => {
+                    const pct = (a.totalMinutes / maxTime) * 100;
+                    // Find main color (first dim)
+                    const firstDim = state.dimensions.find(d => d.id === a.dims[0]);
+                    const barColor = firstDim ? firstDim.color : '#cbd5e1';
+                    
+                    return `
+                    <div class="flex items-center gap-3 w-full group cursor-default" onmouseenter="showTooltip(event, '${formatTime(a.totalMinutes)}', '${barColor}')" onmouseleave="hideTooltip()" onmousemove="moveTooltip(event)">
+                        <div class="w-24 text-right text-xs font-bold text-gray-600 truncate flex-shrink-0">${a.t}</div>
+                        <div class="flex-grow bg-gray-100 rounded-full h-4 overflow-hidden relative">
+                            <div class="h-full rounded-full transition-all duration-700 chart-bar" style="width:${pct}%; background-color:${barColor}"></div>
+                        </div>
+                        <div class="w-12 text-xs font-mono text-gray-500 text-left flex-shrink-0">${formatTime(a.totalMinutes)}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            // 2. Skyline Chart (SVG)
+            const skySvg = document.getElementById('stats-skyline-chart');
+            const dimData = state.dimensions.map(d => {
+                const tasks = state.globalActions.filter(a => a.dims.includes(d.id));
+                const totalTokens = tasks.reduce((sum, t) => sum + calculateActionTokens(t), 0);
+                const target = getDimTarget(d.id, tasks.length);
+                return { ...d, tokens: totalTokens, target: target };
+            });
+
+            // Find absolute max for scaling (either max tokens or max target, whichever is higher, plus padding)
+            const peak = Math.max(...dimData.map(d => Math.max(d.tokens, d.target)));
+            const maxY = peak > 0 ? peak * 1.2 : 10; 
+            
+            // V7.9: Force fallback width for hidden tab rendering
+            const w = skySvg.clientWidth || 600;
+            const h = 300;
+            const padding = 40;
+            const barWidth = (w - (padding * 2)) / dimData.length;
+            const gap = barWidth * 0.2;
+            const finalBarW = barWidth - gap;
+
+            let svgContent = '';
+            
+            // Draw Axis Lines
+            svgContent += `<line x1="${padding}" y1="${h-padding}" x2="${w-padding}" y2="${h-padding}" stroke="#e5e7eb" stroke-width="2"/>`; // X Axis
+
+            dimData.forEach((d, i) => {
+                const x = padding + (i * barWidth) + (gap/2);
+                const barH = (d.tokens / maxY) * (h - padding * 2);
+                const y = (h - padding) - barH;
+                
+                // Target Line
+                const targetH = (d.target / maxY) * (h - padding * 2);
+                const targetY = (h - padding) - targetH;
+                
+                // Bar
+                svgContent += `<rect x="${x}" y="${y}" width="${finalBarW}" height="${barH}" fill="${d.color}" rx="4" class="chart-bar" onmouseenter="showTooltip(event, 'Accumulated: ${d.tokens.toFixed(1)} / Target: ${d.target}', '${d.color}')" onmouseleave="hideTooltip()" onmousemove="moveTooltip(event)"/>`;
+                
+                // Value Label (Top of bar)
+                if (d.tokens > 0) {
+                    svgContent += `<text x="${x + finalBarW/2}" y="${y - 5}" text-anchor="middle" font-size="10" font-weight="bold" fill="${d.color}">${d.tokens % 1 === 0 ? d.tokens : d.tokens.toFixed(1)}</text>`;
+                }
+
+                // Target Marker (Dashed line)
+                svgContent += `<line x1="${x-2}" y1="${targetY}" x2="${x+finalBarW+2}" y2="${targetY}" stroke="${d.color}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>`;
+                
+                // Icon label (Bottom)
+                const iconY = h - padding + 20;
+                // Simplified: Just use the Label abbreviation (First 2 chars)
+                svgContent += `<text x="${x + finalBarW/2}" y="${iconY}" text-anchor="middle" font-size="10" font-weight="bold" fill="#6b7280">${d.label.substring(0,2)}</text>`;
+            });
+
+            skySvg.innerHTML = svgContent;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
