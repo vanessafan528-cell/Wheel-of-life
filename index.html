@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halo's Life Dashboard V7.14 (PDF Fix)</title>
+    <title>Halo's Life Dashboard V7.15 (Mobile Responsive)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 html2canvas 用于生成图片 -->
@@ -17,6 +17,7 @@
             font-family: 'Noto Sans', sans-serif;
             background-color: #f9fafb;
             color: #1f2937;
+            overflow-x: hidden;
         }
         .serif { font-family: 'Noto Serif SC', serif; }
         
@@ -28,7 +29,8 @@
 
         /* 通用样式 */
         .print-page {
-            width: 8.5in;
+            width: 100%;
+            max-width: 8.5in;
             min-height: 11in;
             background: white;
             padding: 0.5in 0.6in;
@@ -37,6 +39,16 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
             transition: height 0.3s;
+            box-sizing: border-box;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .print-page {
+                padding: 16px;
+                min-height: auto;
+                margin-bottom: 1rem;
+            }
         }
         
         #view-wheel .print-page { justify-content: flex-start; }
@@ -351,7 +363,7 @@
     <div class="no-print w-full max-w-5xl px-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 bg-gray-50/95 backdrop-blur py-4 z-20 border-b border-gray-200" id="navigation">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 serif">Life Dashboard</h1>
-            <p class="text-xs text-gray-500">V7.14 (PDF Fix)</p>
+            <p class="text-xs text-gray-500">V7.15 (Mobile Responsive)</p>
         </div>
         <div class="flex bg-gray-200 p-1 rounded-lg overflow-x-auto">
             <button onclick="switchTab('wheel')" id="tab-wheel" class="whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-all shadow bg-white text-gray-900">Assessment</button>
@@ -373,15 +385,15 @@
     <!-- VIEW 1: Wheel -->
     <div id="view-wheel" class="tab-content active">
         <div class="print-page rounded-xl shadow-xl border border-gray-200">
-            <div class="print-header-wrapper w-full flex justify-between items-end border-b border-gray-200 pb-4">
-                <div><h2 class="text-3xl font-serif text-gray-900 tracking-tight">The Wheel of Life</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Snapshot: How does it feel right now?</p></div>
+            <div class="print-header-wrapper w-full flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-200 pb-4 gap-2">
+                <div><h2 class="text-2xl sm:text-3xl font-serif text-gray-900 tracking-tight">The Wheel of Life</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Snapshot: How does it feel right now?</p></div>
                 <div class="text-right text-xs text-gray-400 font-mono flex flex-col items-end gap-1"><div class="flex items-center gap-1"><span>NAME:</span><input type="text" value="HALO" class="name-input bg-transparent border-b border-dashed border-gray-300 w-24 text-right font-mono text-xs text-gray-400 uppercase focus:border-gray-500 focus:text-gray-600 transition-colors" oninput="handleNameInput(this.value)" placeholder="YOUR NAME"></div><div class="flex items-center gap-1"><span>DATE:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="TODAY"></div></div>
             </div>
             <div class="page-center-content">
                 <div class="print-scale-down relative w-full max-w-[550px] aspect-square mb-6"><svg id="wheel-svg" viewBox="0 0 600 600" class="w-full h-full"></svg></div>
                 <div id="bottom-memos" class="print-scale-down w-full mt-2">
                     <div class="flex items-center gap-3 mb-4"><div class="h-px bg-gray-200 flex-grow"></div><span class="text-xs font-serif uppercase tracking-widest text-gray-400">Quick Notes</span><div class="h-px bg-gray-200 flex-grow"></div></div>
-                    <div id="memo-grid" class="grid grid-cols-2 gap-4"></div>
+                    <div id="memo-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
                 </div>
             </div>
             <div class="no-print w-full mt-8 pt-6 border-t border-gray-100 flex-shrink-0">
@@ -397,12 +409,12 @@
     <!-- VIEW 2: Tracker -->
     <div id="view-tracker" class="tab-content">
         <div class="print-page rounded-xl shadow-xl border border-gray-200">
-            <div class="print-header-wrapper w-full flex justify-between items-start border-b border-gray-200 pb-4">
+            <div class="print-header-wrapper w-full flex flex-col sm:flex-row justify-between items-start border-b border-gray-200 pb-4 gap-4">
                 <div>
-                    <h2 class="text-3xl font-serif text-gray-900 tracking-tight">Weekly Tracker</h2>
+                    <h2 class="text-2xl sm:text-3xl font-serif text-gray-900 tracking-tight">Weekly Tracker</h2>
                     <p class="text-sm text-gray-500 font-serif italic mt-1">Collecting tokens of life.</p>
                 </div>
-                <div class="flex flex-col items-end w-1/2">
+                <div class="flex flex-col items-end w-full sm:w-1/2">
                     <div class="w-full text-white px-4 py-3 rounded-xl shadow-md flex flex-col gap-2 mb-2" style="background-color: var(--c-success);">
                         <div class="flex justify-between items-center">
                             <div class="text-[10px] uppercase tracking-wider text-white opacity-80">Total Tokens</div>
@@ -431,8 +443,8 @@
     <!-- VIEW 3: Statistics -->
     <div id="view-stats" class="tab-content">
         <div class="print-page rounded-xl shadow-xl border border-gray-200">
-            <div class="print-header-wrapper w-full flex justify-between items-end border-b border-gray-200 pb-4">
-                <div><h2 class="text-3xl font-serif text-gray-900 tracking-tight">Weekly Statistics</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Visualizing your flow and growth.</p></div>
+            <div class="print-header-wrapper w-full flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-200 pb-4 gap-2">
+                <div><h2 class="text-2xl sm:text-3xl font-serif text-gray-900 tracking-tight">Weekly Statistics</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Visualizing your flow and growth.</p></div>
                 <div class="text-right text-xs text-gray-400 font-mono flex flex-col items-end gap-1"><p class="name-display">NAME: HALO</p><div class="flex items-center gap-1 justify-end"><span>DATE:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="DATE"></div></div>
             </div>
 
@@ -465,8 +477,8 @@
     <!-- VIEW 4: Journal -->
     <div id="view-journal" class="tab-content">
         <div class="print-page rounded-xl shadow-xl border border-gray-200">
-            <div class="print-header-wrapper w-full flex justify-between items-end border-b border-gray-200 pb-4">
-                <div><h2 class="text-3xl font-serif text-gray-900 tracking-tight">Journal & Insights</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Deep Dive & Reflection</p></div>
+            <div class="print-header-wrapper w-full flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-200 pb-4 gap-2">
+                <div><h2 class="text-2xl sm:text-3xl font-serif text-gray-900 tracking-tight">Journal & Insights</h2><p class="text-sm text-gray-500 font-serif italic mt-1">Deep Dive & Reflection</p></div>
                 <div class="text-right text-xs text-gray-400 font-mono flex flex-col items-end gap-1"><p class="name-display">NAME: HALO</p><div class="flex items-center gap-1 justify-end"><span>DATE:</span><input type="text" class="date-input" value="" onchange="handleDateInput(this.value)" placeholder="DATE"></div></div>
             </div>
             <div id="summary-list" class="space-y-6 print-scale-down"></div>
