@@ -490,6 +490,57 @@
     <div id="export-container" class="export-mode"></div>
 
     <script>
+        
+// ===== SUPABASE CLOUD SYNC =====
+const SUPA_URL = "https://wciwjanmosecvlljtkhl.supabase.co";
+const SUPA_KEY = "sb_publishable_GwQy7EzFYKdx9-FTHE1X3Q_kDXb1T77";
+
+function getAnonId() {
+  let id = document.cookie.split('; ').find(r => r.startsWith('wol_uid='));
+  if (id) return id.split('=')[1];
+  id = crypto.randomUUID();
+  document.cookie = 'wol_uid=' + id + '; max-age=31536000; path=/; SameSite=Lax';
+  return id;
+}
+const ANON_ID = getAnonId();
+
+async function loadFromSupabase() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/wheel_profiles?user_id=eq.' + ANON_ID + '&select=state', {
+      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length > 0 && rows[0].state) {
+        localStorage.setItem('haloDashboardV6_0', JSON.stringify(rows[0].state));
+      }
+    }
+  } catch (e) { console.warn('Cloud load failed, using local data', e); }
+}
+
+let _syncTimer = null;
+function saveToSupabase(stateObj) {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    try {
+      await fetch(SUPA_URL + '/rest/v1/wheel_profiles', {
+        method: 'POST',
+        headers: {
+          apikey: SUPA_KEY,
+          Authorization: 'Bearer ' + SUPA_KEY,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          user_id: ANON_ID,
+          state: stateObj,
+          updated_at: new Date().toISOString()
+        })
+      });
+    } catch (e) { console.warn('Cloud save failed', e); }
+  }, 2000);
+}
+// ===== END SUPABASE =====        
         // --- Core Libraries ---
         const iconLib = { 'feather': '<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line>', 'briefcase': '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>', 'diamond': '<path d="M6 3h12l4 6-10 13L2 9z"></path>', 'zap': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>', 'heart': '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>', 'eye': '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>', 'book': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>', 'coffee': '<path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line>', 'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>', 'sun': '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>', 'moon': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>', 'fire': '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3.3a7 7 0 0 0 4 3.8z"></path>', 'anchor': '<circle cx="12" cy="5" r="3"></circle><line x1="12" y1="22" x2="12" y2="8"></line><path d="M5 12H2a10 10 0 0 0 20 0h-3"></path>', 'smile': '<circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line>', 'droplet': '<path d="M12 2.69l5.74 9.2a6 6 0 1 1-11.48 0z"></path>', 'leaf': '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>', 'music': '<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>', 'camera': '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle>', 'home': '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>', 'gift': '<polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 1 0-5C13 2 12 7 12 7z"></path>' };
         const morandiColors = [ '#748E9A', '#8F9E8B', '#B79395', '#D4C4A9', '#A696A8', '#9E9E9E', '#809B9B', '#CDBBA7', '#8DA399', '#B5A89E', '#9A8F97', '#8B949E', '#A9B7C4', '#C4B7A9', '#9EA6B7', '#B79E9E' ];
@@ -674,7 +725,7 @@
         }
 
         function executeReset() { state.dimensions = JSON.parse(JSON.stringify(defaultDimensions)); state.globalActions = JSON.parse(JSON.stringify(defaultGlobalActions)); state.scores = {}; state.memos = {}; state.dimTargets = {}; state.dimensions.forEach(d => { state.scores[d.id] = 5; }); state.weeklyGoal = 20; state.dateRange = new Date().toLocaleDateString('en-US'); saveData(); }
-        function saveData() { localStorage.setItem('haloDashboardV6_0', JSON.stringify(state)); if(state.activeTab === 'wheel') renderSVG(); if(state.activeTab === 'stats') renderStatsView(); }
+        function saveData() { localStorage.setItem('haloDashboardV6_0', JSON.stringify(state)); saveToSupabase(state); if(state.activeTab === 'wheel') renderSVG(); if(state.activeTab === 'stats') renderStatsView(); }
         function switchTab(tab) {
             state.activeTab = tab; saveData();
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -810,7 +861,10 @@
             skySvg.innerHTML = svgContent;
         }
 
-        window.onload = init;
+window.onload = async function() {
+    await loadFromSupabase();
+    init();
+};
     </script>
 </body>
 </html>
